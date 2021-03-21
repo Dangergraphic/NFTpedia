@@ -1,39 +1,46 @@
 import React from "react";
 
-
 import { ethers } from "ethers";
 
 import TokenArtifact from "../contracts/Token.json";
 import contractAddress from "../contracts/contract-address.json";
-
 
 import { NoWalletDetected } from "./NoWalletDetected";
 import { ConnectWallet } from "./ConnectWallet";
 import { TransactionErrorMessage } from "./TransactionErrorMessage";
 import { WaitingForTransactionMessage } from "./WaitingForTransactionMessage";
 
-const HARDHAT_NETWORK_ID = '31337';
-
+const HARDHAT_NETWORK_ID = "31337";
 
 const ERROR_CODE_TX_REJECTED_BY_USER = 4001;
-
 
 export class Dapp extends React.Component {
   constructor(props) {
     super(props);
 
     this.initialState = {
- 
       tokenData: undefined,
-   
+
       selectedAddress: undefined,
       balance: undefined,
       txBeingSent: undefined,
       transactionError: undefined,
       networkError: undefined,
+      value: "",
+
+      handleChange: this.handleChange.bind(this),
+      handleSubmit: this.handleSubmit.bind(this),
     };
 
     this.state = this.initialState;
+  }
+
+  handleChange(event) {
+    this.setState({ value: event.target.value });
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
   }
 
   render() {
@@ -43,8 +50,8 @@ export class Dapp extends React.Component {
 
     if (!this.state.selectedAddress) {
       return (
-        <ConnectWallet 
-          connectWallet={() => this._connectWallet()} 
+        <ConnectWallet
+          connectWallet={() => this._connectWallet()}
           networkError={this.state.networkError}
           dismiss={() => this._dismissNetworkError()}
         />
@@ -55,14 +62,21 @@ export class Dapp extends React.Component {
       <div className="container p-4">
         <div className="row">
           <div className="col-12">
-            <h1>
-              NFTpedia
-            </h1>
+            <h1>NFTpedia</h1>
             <p>
-              Welcome <b>{this.state.selectedAddress}</b>
-              .
+              Welcome <b>{this.state.selectedAddress}</b>.
             </p>
-            <button onClick={() => this._mintTokens()}>Mint</button>
+            <form onSubmit={this.handleSubmit}>
+              <label>
+                Wikipedia URL
+                <input
+                  type="wikiurl"
+                  value={this.state.value}
+                  onChange={this.state.handleChange}
+                />
+              </label>
+              <button onClick={() => this._mintTokens(this.state.value)}>Mint</button>
+            </form>
           </div>
         </div>
 
@@ -104,10 +118,10 @@ export class Dapp extends React.Component {
       if (newAddress === undefined) {
         return this._resetState();
       }
-      
+
       this._initialize(newAddress);
     });
-    
+
     window.ethereum.on("networkChanged", ([networkId]) => {
       this._stopPollingData();
       this._resetState();
@@ -115,7 +129,6 @@ export class Dapp extends React.Component {
   }
 
   _initialize(userAddress) {
-
     this.setState({
       selectedAddress: userAddress,
     });
@@ -158,13 +171,16 @@ export class Dapp extends React.Component {
     this.setState({ balance });
   }
 
-  async _mintTokens() {
-
+  async _mintTokens(value) {
     try {
       this._dismissTransactionError();
 
-      // TODO map second parameter to input field
-      const tx = await this._token.awardItem("0x7396D21a2A9975814deE68217f1f1F13EBDBEE40", "works.com");
+      const tx = await this._token.awardItem(
+        "0x7396D21a2A9975814deE68217f1f1F13EBDBEE40",
+        value
+      );
+      
+      console.log("Minted with " + this.state.value)
       this.setState({ txBeingSent: tx.hash });
 
       const receipt = await tx.wait();
@@ -211,8 +227,8 @@ export class Dapp extends React.Component {
       return true;
     }
 
-    this.setState({ 
-      networkError: 'Please connect Metamask to Localhost:8545'
+    this.setState({
+      networkError: "Please connect Metamask to Localhost:8545",
     });
 
     return false;
